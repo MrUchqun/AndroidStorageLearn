@@ -3,10 +3,12 @@ package com.example.androidstoragelearn
 import android.Manifest
 import android.app.Activity
 import android.content.ComponentName
+import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.opengl.Visibility
 import android.os.Build
@@ -35,16 +37,19 @@ class MainActivity : AppCompatActivity() {
     private var readPermissionGranted = false
     private var writePermissionGranted = false
     private var cameraPermissionGranted = false
-    private var isPersistent = true
+    private var isPersistent = false
     private var isInternal = false
-
-    private lateinit var btnEnabledPermission: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         requestPermission()
         initViews()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkPermissionBtnStatus()
     }
 
     private fun initViews() {
@@ -55,7 +60,9 @@ class MainActivity : AppCompatActivity() {
         val btnReadExternal: Button = findViewById(R.id.btn_read_external)
         val btnDeleteExternal: Button = findViewById(R.id.btn_delete_external)
         val btnTakePhoto: Button = findViewById(R.id.btn_take_photo)
-        btnEnabledPermission = findViewById(R.id.btn_enabled_permission)
+        val btnGetInternal: Button = findViewById(R.id.btn_get_internal)
+        val btnGetExternal: Button = findViewById(R.id.btn_get_external)
+
 
         btnSaveInternal.setOnClickListener {
             saveInternalFile("Welcome to PDP Academy!")
@@ -85,17 +92,17 @@ class MainActivity : AppCompatActivity() {
             takePhoto.launch()
         }
 
-        btnEnabledPermission.setOnClickListener {
-            startActivity(Intent().apply {
-                action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-                data = Uri.fromParts("package", packageName, null)
+        btnGetInternal.setOnClickListener {
+            startActivity(Intent(this, DetailsActivity::class.java).apply {
+                putExtra("isInternal", true)
             })
         }
-    }
 
-    override fun onResume() {
-        super.onResume()
-        btnEnabledPermission.visibility = if (checkPermission()) VISIBLE else GONE
+        btnGetExternal.setOnClickListener {
+            startActivity(Intent(this, DetailsActivity::class.java).apply {
+                putExtra("isInternal", false)
+            })
+        }
     }
 
     private fun checkStoragePaths() {
@@ -139,6 +146,8 @@ class MainActivity : AppCompatActivity() {
             ).show()
         }
     }
+
+    // PERMISSIONS
 
     private fun requestPermission() {
 
@@ -244,20 +253,42 @@ class MainActivity : AppCompatActivity() {
                 ).show()
         }
 
+    private fun checkPermissionBtnStatus() {
+        val btnEnabledPermission: Button = findViewById(R.id.btn_enabled_permission)
+        btnEnabledPermission.apply {
+            setOnClickListener {
+                startActivity(Intent().apply {
+                    action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                    data = Uri.fromParts("package", packageName, null)
+                })
+            }
+            visibility = if (checkPermission()) VISIBLE else GONE
+        }
+    }
+
+    // SCOPED STORAGE
+
     private val takePhoto =
         registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
 
             val filename = UUID.randomUUID().toString()
 
-            val isPhotoSaved = if (isInternal) {
-                savePhotoToInternalStorage(filename, bitmap!!)
-            } else {
-                if (writePermissionGranted) {
-                    savePhotoToExternalStorage(filename, bitmap!!)
+            val isPhotoSaved = try {
+
+                if (isInternal) {
+                    savePhotoToInternalStorage(filename, bitmap!!)
                 } else {
-                    false
+                    if (writePermissionGranted) {
+                        savePhotoToExternalStorage(filename, bitmap!!)
+                    } else {
+                        false
+                    }
                 }
+
+            } catch (e: Exception) {
+                false
             }
+
             if (isPhotoSaved) {
                 Toast.makeText(
                     this,
@@ -276,7 +307,7 @@ class MainActivity : AppCompatActivity() {
     private fun savePhotoToInternalStorage(filename: String, bmp: Bitmap): Boolean {
         return try {
             openFileOutput("$filename.jpg", MODE_PRIVATE).use { stream ->
-                if (!bmp.compress(Bitmap.CompressFormat.JPEG, 100, stream)) {
+                if (!bmp.compress(Bitmap.CompressFormat.JPEG, 95, stream)) {
                     throw IOException("Couldn't save bitmap.")
                 }
             }
@@ -303,7 +334,7 @@ class MainActivity : AppCompatActivity() {
         return try {
             contentResolver.insert(collection, contentValues)?.also { uri ->
                 contentResolver.openOutputStream(uri).use { outputStream ->
-                    if (!bmp.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)) {
+                    if (!bmp.compress(Bitmap.CompressFormat.JPEG, 95, outputStream)) {
                         throw IOException("Couldn't save bitmap")
                     }
                 }

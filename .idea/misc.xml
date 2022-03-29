@@ -3,7 +3,9 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/AndroidStudioProjects/AndroidStorageLearn/app/src/main/res/layout/activity_details.xml" value="0.27447916666666666" />
         <entry key="..\:/AndroidStudioProjects/AndroidStorageLearn/app/src/main/res/layout/activity_main.xml" value="0.27447916666666666" />
+        <entry key="..\:/AndroidStudioProjects/AndroidStorageLearn/app/src/main/res/layout/item_view.xml" value="0.27447916666666666" />
       </map>
     </option>
   </component>
